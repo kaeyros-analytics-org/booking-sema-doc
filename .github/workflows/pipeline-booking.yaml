@@ -1,0 +1,52 @@
+
+name: CI/CD Pipeline Production -
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  FRONTEND_IMAGE_REPOSITORY: ghcr.io/kaeyros-analytics-org/sema-doc-booking
+ 
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  ci:
+    name: Continuous Integration - sema-doc-univers
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set Git Commit SHA as Tag
+        run: echo "IMAGE_TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Login to GitHub Container Registry
+        run: |
+          echo "${{ secrets.TOKEN }}" | docker login ghcr.io -u "${{ secrets.USERNAME }}" --password-stdin
+
+      - name: Create .env file for frontend
+        run: |
+          touch .env && \
+          echo " MONGO_URL=${{ env.MONGO_URL }}" >> .env
+         
+         
+          
+      - name: Build the Docker image for frontend
+        run: |
+          # cd booking && \
+          # rm -f renv.lock       
+          docker build -t ${{ env.FRONTEND_IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }} .
+
+      - name: Tag image as latest
+        run: |
+          docker tag ${{ env.FRONTEND_IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }} ${{ env.FRONTEND_IMAGE_REPOSITORY }}:latest
+
+      - name: Push frontend images to GitHub Container Registry
+        run: |
+          docker push ${{ env.FRONTEND_IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          docker push ${{ env.FRONTEND_IMAGE_REPOSITORY }}:latest
